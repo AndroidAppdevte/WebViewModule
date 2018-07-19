@@ -1,0 +1,36 @@
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+    <script type="text/javascript">
+    function actionFromNative(){
+         document.getElementById("log_msg").innerHTML +=
+             "<br\>原生调用了js函数";
+    }
+
+    function actionFromNativeWithParam(arg){
+         document.getElementById("log_msg").innerHTML +=
+             ("<br\>原生调用了js函数并传递参数："+arg);
+    }
+
+    function s() {
+                //调用原生的方法，android为约定的别名；back()为原生的方法
+                var result=android.back();
+                //将返回结果显示在id为p的控件上
+                document.getElementById("log_msg").innerHTML=result;
+            }
+
+    </script>
+</head>
+<body>
+<p>WebView与Javascript交互</p>
+<div>
+    <button onClick="s()">点击调用java代码，并获取返回值</button>
+</div>
+<br/>
+<div>
+    <button onClick="android.actionFromJsWithParam('come from Js','第二个参数')">点击调用原生代码并传递参数</button>
+</div>
+<br/>
+<div id="log_msg">调用打印信息</div>
+</body>
+</html>

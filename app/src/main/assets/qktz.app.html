@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html style="font-size: 57px">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0;">
+    <meta content="telephone=no" name="format-detection"/>
+    <title>test</title>
+    <style>
+      *{
+        font-size: .5rem;
+      }
+
+    </style>
+
+    <script>
+        var qktzApp = {
+            login : function () {
+                //调APP方法
+               _qktzApp.login(function (result) {
+                   alert(result)
+               })
+
+            },
+
+            getSessionToken : function () {
+                //调APP方法
+                <!--__qktzApp.getSessionToken(function (result) {-->
+                    <!--alert(result)-->
+                <!--})-->
+
+                var token = _qktzApp.getSessionToken();
+                alert(token)
+            },
+
+            test : function () {
+               _qktzApp.getUserInfo();
+                   <!--var token = __qktzApp.getSessionToken();-->
+                <!--alert(token)-->
+            }
+        }
+    
+
+    </script>
+<body>
+
+<button onclick="qktzApp.login()">登录</button>
+<button onclick="qktzApp.getSessionToken()">得到sessionToken</button>
+<button onclick="qktzApp.test()">测试</button>
+
+
+</body>
+
+
+</html>
