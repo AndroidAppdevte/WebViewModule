@@ -1,15 +1,15 @@
 package com.scqkzqtz.webview.web;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Window;
 
 import com.scqkzqtz.webview.R;
 import com.scqkzqtz.webview.databinding.ActivityWebViewBinding;
-import com.scqkzqtz.webview.web.model.WebDateEntity;
+import com.scqkzqtz.webview.web.model.WebViewConfig;
 
 
 public class WebViewActivity extends AppCompatActivity {
@@ -19,6 +19,10 @@ public class WebViewActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
         binding = DataBindingUtil.setContentView(this, R.layout.activity_web_view);
         initView();
     }
@@ -32,14 +36,14 @@ public class WebViewActivity extends AppCompatActivity {
 
     /**
      * @param context
-     * @param entity
+     * @param config  web配置文件
      * @return
      */
-    public static Intent getIntent(Context context, WebDateEntity entity) {
+    public static Intent getIntent(Context context, WebViewConfig config) {
         Intent intent = new Intent(context, WebViewActivity.class);
         Bundle bundle = new Bundle();
-        if (entity != null)
-            bundle.putSerializable("entity", entity);
+        if (config != null)
+            bundle.putSerializable("config", config);
         intent.putExtras(bundle);
         return intent;
     }

@@ -37,6 +37,4 @@ dependencies {
 
     compile files('libs/tbs_sdk_thirdapp_v3.6.0.1249_43610.jar')
     compile 'com.scqkzqtz:baselibrary:1.0.1'
-
-    compile 'com.scqkzqtz:baselibrary:1.0.1'
 }

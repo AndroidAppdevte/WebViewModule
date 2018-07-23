@@ -1,27 +1,34 @@
 package com.scqkzqtz.webview.web;
 
 import android.annotation.SuppressLint;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.databinding.DataBindingUtil;
+import android.graphics.drawable.ClipDrawable;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.scqkzqtz.librarybase.utils.PreferenceUtils;
 import com.scqkzqtz.librarybase.utils.ToastUtils;
 import com.scqkzqtz.webview.R;
 import com.scqkzqtz.webview.databinding.FragmentWebViewBinding;
-import com.scqkzqtz.webview.web.model.WebDateEntity;
+import com.scqkzqtz.webview.web.dialog.WebSetSizePop;
+import com.scqkzqtz.webview.web.model.WebViewConfig;
 import com.tencent.smtt.sdk.WebChromeClient;
 import com.tencent.smtt.sdk.WebSettings;
 import com.tencent.smtt.sdk.WebView;
@@ -34,45 +41,51 @@ import org.json.JSONObject;
  * Created by zsx on 2018/6/11.
  */
 
-public class WebViewFragment extends Fragment implements ScaleGestureDetector.OnScaleGestureListener, View.OnTouchListener {
-    private String AppVersion = "";
-    private String userInfoStr = "";
-    private String deviceInfoStr = "";
+public class WebViewFragment extends Fragment implements ScaleGestureDetector.OnScaleGestureListener, View.OnTouchListener, View.OnClickListener {
+    private FragmentWebViewBinding binding;
+
+    private String AppVersion = "";//app版本号
+    private String userInfoStr = "";//用户信息json字符串
+    private String deviceInfoStr = "";//设备信息json字符串
     private String sessionToken = "";
     private String loginTag = "";//登录后调用javascript使用
 
-    private FragmentWebViewBinding binding;
-    private WebDateEntity entity;
+    private WebViewConfig config;
 
     private int Text_Size = 100;//字体大小
-    private ScaleGestureDetector mScaleGestureDetector = null;//手势
+    private ScaleGestureDetector mScaleGestureDetector = null;//手势-字体缩放
+    private WebSetSizePop setSizePop = null;
+
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         binding = DataBindingUtil.inflate(inflater, R.layout.fragment_web_view, container, false);
         init();
-        initView();
-//        binding.webview.loadUrl(entity.getUrl());
-
-        binding.webview.loadUrl("file:///android_asset/qktz.app.html");
         return binding.getRoot();
     }
 
     private void init() {
-        entity = (WebDateEntity) getArguments().getSerializable("entity");
+        config = (WebViewConfig) getArguments().getSerializable("config");
         AppVersion = getAppVersionName(getActivity());
         sessionToken = "111111111";//TODO
         initUserInfoStr();
         initDeviceInfoStr();
+
+        initView();
+        binding.webview.loadUrl(config.getUrl());
+//        binding.webview.loadUrl("file:///android_asset/qktz.app.html");
     }
 
     private void initView() {
-        initWebView();
-        binding.titleBack.setOnClickListener(v -> {
-            onKeyDown();
-        });
-        binding.titleClose.setOnClickListener(v -> getActivity().finish());
+        initWeb();
+        mScaleGestureDetector = new ScaleGestureDetector(getActivity(), this);
+
+        binding.titleBack.setOnClickListener(this);
+        binding.titleClose.setOnClickListener(this);
+        binding.bottomShare.setOnClickListener(this);
+        binding.bottomCollect.setOnClickListener(this);
+
         //点击返回键
         binding.webview.setOnKeyListener(new View.OnKeyListener() {
             @Override
@@ -86,11 +99,80 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
                 return false;
             }
         });
-        mScaleGestureDetector = new ScaleGestureDetector(getActivity(), this);
+
+        setSizePop = new WebSetSizePop(getActivity(), config);
+        setSizePop.setOnClickSizeListener(new WebSetSizePop.OnClickSizeListener() {
+            @Override
+            public void onClick(int position, boolean isUp) {
+                Text_Size = position;
+                setTextSize(isUp);
+                PreferenceUtils.commitInt("TEXT_SIZE", Text_Size);
+            }
+        });
+        setSizePop.setOnClickButtonListener(new WebSetSizePop.OnClickButtonListener() {
+            @Override
+            public void onClick(int position) {
+                switch (position) {
+                    case 0://收藏
+                        setCollect();
+                        setSizePop.dismiss();
+                        break;
+                    case 1://分享
+                        share();
+                        setSizePop.dismiss();
+                        break;
+                    case 2://复制链接
+                        setSizePop.dismiss();
+                        ((ClipboardManager) getActivity().getSystemService(Context.CLIPBOARD_SERVICE)).setText(config.getUrl());
+                        ToastUtils.showLongToast(getActivity(), "复制成功");
+                        break;
+                }
+            }
+        });
+
+        //******************设置参数实现*********************
+        if (config.getShowProgressBar()) binding.progressBar.setVisibility(View.VISIBLE);
+        else binding.progressBar.setVisibility(View.GONE);
+
+        ClipDrawable d = new ClipDrawable(new ColorDrawable(config.getProgressBarColor()), Gravity.LEFT, ClipDrawable.HORIZONTAL);
+        binding.progressBar.setProgressDrawable(d);
+
+        if (config.getFullScreen()) {
+            binding.title.setVisibility(View.GONE);
+            return;
+        }
+
+        if (config.getShowBottom()) binding.bottom.setVisibility(View.VISIBLE);
+        else binding.bottom.setVisibility(View.GONE);
+
+
+        if (!config.getShowCollection()) {
+            binding.bottomCollect.setVisibility(View.GONE);
+        } else {
+            binding.bottomCollect.setVisibility(View.VISIBLE);
+        }
+
+        if (config.getTitleRightType() == null) {
+            binding.titleRight.setVisibility(View.GONE);
+        } else if ("MORE".equals(config.getTitleRightType())) {
+            ImageView imageView = new ImageView(getActivity());
+            imageView.setImageResource(R.mipmap.web_detail_more);
+            binding.titleRight.addView(imageView);
+            binding.titleRight.setOnClickListener(v -> {
+                if (!setSizePop.isShowing()) {
+                    setSizePop.show(binding.getRoot(), Text_Size);
+                }
+            });
+        } else {
+            TextView textView = new TextView(getActivity());
+            textView.setText("type未匹配");
+            binding.titleRight.addView(textView);
+        }
+
     }
 
     @SuppressLint("JavascriptInterface")
-    private void initWebView() {
+    private void initWeb() {
         WebSettings webSettings = binding.webview.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -101,8 +183,8 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
         webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         webSettings.setSavePassword(false);
 
-// 第一个参数：这里需要一个与js映射的java对象
-// 第二个参数：该java对象被映射为js对象后在js里面的对象名，在js中要调用该对象的方法就是通过这个来调用
+        // 第一个参数：这里需要一个与js映射的java对象
+        // 第二个参数：该java对象被映射为js对象后在js里面的对象名，在js中要调用该对象的方法就是通过这个来调用
         binding.webview.addJavascriptInterface(new JavascriptInterfaceModel(), "_qktzApp");
         binding.webview.setWebChromeClient(mWebChromeClient);
         binding.webview.setWebViewClient(mWebViewClient);
@@ -123,6 +205,10 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
         @Override
         public void onProgressChanged(WebView view, int newProgress) {
             if (newProgress == 100) {
+                binding.progressBar.setVisibility(View.GONE);//加载完网页进度条消失
+            } else if (config.getShowProgressBar()) {
+                binding.progressBar.setVisibility(View.VISIBLE);//开始加载网页时显示进度条
+                binding.progressBar.setProgress(newProgress);//设置进度值
             }
         }
     };
@@ -157,6 +243,42 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
         }
     };
 
+    /**
+     * 初始化用户信息json
+     */
+    public void initUserInfoStr() {
+        JSONObject jsonObject = new JSONObject();
+        try {
+            //TODO 未添加参数
+            jsonObject.put("userObjectId", "");
+            jsonObject.put("userName", "");
+            jsonObject.put("mobilePhoneNumber", "");
+            jsonObject.put("headImageUrl", "");
+            jsonObject.put("os", "android");
+            userInfoStr = jsonObject.toString();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 初始化设备信息json
+     */
+    public void initDeviceInfoStr() {
+        JSONObject jsonObject = new JSONObject();
+        try {
+            //TODO 未添加参数
+            jsonObject.put("appVersion", AppVersion);
+            jsonObject.put("channel", "");
+            jsonObject.put("clientid", "");
+            jsonObject.put("os", "android");
+            deviceInfoStr = jsonObject.toString();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //************************************************************字体缩放功能开始*************************************************************
     private void setTextSize(boolean isUp) {
         String tosetStr = "标准字体";
         switch (Text_Size) {
@@ -188,8 +310,7 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
 
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        if (binding.title.getVisibility() == View.VISIBLE &&
-                binding.titleSize.getVisibility() == View.VISIBLE) {
+        if (config.getFontScaling()) {
             mScaleGestureDetector.onTouchEvent(event);
         }
         return false;
@@ -224,6 +345,26 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
         setTextSize(true);
     }
 
+    //************************************************************字体缩放功能结束*************************************************************
+
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.title_back:
+                onKeyDown();
+                break;
+            case R.id.title_close:
+                getActivity().finish();
+                break;
+            case R.id.bottom_share:
+                share();
+                break;
+            case R.id.bottom_collect:
+                setCollect();
+                break;
+        }
+    }
 
     /**
      * 处理回退 事件
@@ -237,6 +378,9 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
         }
     }
 
+    /**
+     * Javascript交互
+     */
     class JavascriptInterfaceModel {
         @android.webkit.JavascriptInterface
         public void onBack() {
@@ -299,38 +443,19 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
     }
 
     /**
-     * 初始化用户信息json
+     * 分享
      */
-    public void initUserInfoStr() {
-        JSONObject jsonObject = new JSONObject();
-        try {
-            //TODO 未添加参数
-            jsonObject.put("userObjectId", "");
-            jsonObject.put("userName", "");
-            jsonObject.put("mobilePhoneNumber", "");
-            jsonObject.put("headImageUrl", "");
-            jsonObject.put("os", "android");
-            deviceInfoStr = jsonObject.toString();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+    private void share() {
+        //TODO
+        ToastUtils.showLongToast(getActivity(), "分享");
     }
 
     /**
-     * 初始化设备信息json
+     * 收藏
      */
-    public void initDeviceInfoStr() {
-        JSONObject jsonObject = new JSONObject();
-        try {
-            //TODO 未添加参数
-            jsonObject.put("appVersion", AppVersion);
-            jsonObject.put("channel", "");
-            jsonObject.put("clientid", "");
-            jsonObject.put("os", "android");
-            userInfoStr = jsonObject.toString();
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+    private void setCollect() {
+        //TODO
+        ToastUtils.showLongToast(getActivity(), "收藏");
     }
 
     /**
