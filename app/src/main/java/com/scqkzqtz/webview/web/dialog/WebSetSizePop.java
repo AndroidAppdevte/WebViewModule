@@ -21,7 +21,6 @@ import com.scqkzqtz.webview.web.model.WebViewConfig;
 
 /**
  * 网页设置字体大小弹框
- * Created by zsx on 2018/7/20.
  */
 
 public class WebSetSizePop extends PopupWindow {

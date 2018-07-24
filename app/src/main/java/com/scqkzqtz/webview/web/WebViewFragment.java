@@ -23,8 +23,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import com.scqkzqtz.librarybase.utils.PreferenceUtils;
-import com.scqkzqtz.librarybase.utils.ToastUtils;
+import com.scqkzqtz.base.library.utils.PreferenceUtils;
+import com.scqkzqtz.base.library.utils.ToastUtils;
 import com.scqkzqtz.webview.R;
 import com.scqkzqtz.webview.databinding.FragmentWebViewBinding;
 import com.scqkzqtz.webview.web.dialog.WebSetSizePop;
@@ -38,7 +38,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * Created by zsx on 2018/6/11.
+ * webview实现Fragment
  */
 
 public class WebViewFragment extends Fragment implements ScaleGestureDetector.OnScaleGestureListener, View.OnTouchListener, View.OnClickListener {
@@ -191,6 +191,9 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
         binding.webview.setOnTouchListener(this);
     }
 
+    /**
+     * WebChromeClient 监听加载进度及H5返回的页面标题
+     */
     private WebChromeClient mWebChromeClient = new WebChromeClient() {
         @Override
         public void onReceivedTitle(WebView view, String title) {
@@ -213,6 +216,9 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
         }
     };
 
+    /**
+     *mWebViewClient H5页面加载成功失败监听
+     */
     private WebViewClient mWebViewClient = new WebViewClient() {
 
         @Override
@@ -379,7 +385,7 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
     }
 
     /**
-     * Javascript交互
+     * Javascript交互类
      */
     class JavascriptInterfaceModel {
         @android.webkit.JavascriptInterface
@@ -443,7 +449,7 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
     }
 
     /**
-     * 分享
+     * 分享方法
      */
     private void share() {
         //TODO
@@ -451,7 +457,7 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
     }
 
     /**
-     * 收藏
+     * 收藏方法
      */
     private void setCollect() {
         //TODO
@@ -460,11 +466,7 @@ public class WebViewFragment extends Fragment implements ScaleGestureDetector.On
 
     /**
      * 获取app版本号
-     *
-     * @param context
-     * @return
      */
-
     private String getAppVersionName(Context context) {
         String versionName = "";
         try {

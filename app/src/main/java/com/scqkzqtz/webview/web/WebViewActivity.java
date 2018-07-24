@@ -12,6 +12,9 @@ import com.scqkzqtz.webview.databinding.ActivityWebViewBinding;
 import com.scqkzqtz.webview.web.model.WebViewConfig;
 
 
+/**
+ * 装载WebViewFragment
+ */
 public class WebViewActivity extends AppCompatActivity {
     private ActivityWebViewBinding binding;
     private WebViewFragment webViewFragment;
